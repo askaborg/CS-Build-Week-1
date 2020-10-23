@@ -1,92 +1,60 @@
-from time import sleep
-from random import randint
 import pygame
+import numpy as np
 
-pygame.init()
+col_about_to_die = (200, 200, 225)
+col_alive = (255, 255, 215)
+col_background = (10, 10, 40)
+col_grid = (30, 30, 60)
 
-#Initialise the screen
-xmax = 600 #Width of screen in pixels
-ymax = 600 #Height of screen in pixels
-screen = pygame.display.set_mode((xmax, ymax), 0, 24) #New 24-bit screen
+def update(surface, cur, sz):
+    nxt = np.zeros((cur.shape[0], cur.shape[1]))
 
-def evolve_cell(alive, neighbours):
-    return neighbours == 3 or (alive and neighbours == 2)
+    for r, c in np.ndindex(cur.shape):
+        num_alive = np.sum(cur[r-1:r+2, c-1:c+2]) - cur[r, c]
 
-def count_neighbours(grid, position):
-    x,y = position
-    neighbour_cells = [(x - 1, y - 1), (x - 1, y + 0), (x - 1, y + 1),
-                       (x + 0, y - 1),                 (x + 0, y + 1),
-                       (x + 1, y - 1), (x + 1, y + 0), (x + 1, y + 1)]
-    count = 0
-    for x,y in neighbour_cells:
-        if x >= 0 and y >= 0:
-            try:
-                count += grid[x][y]
-            except:
-                pass
-    return count
+        if cur[r, c] == 1 and num_alive < 2 or num_alive > 3:
+            col = col_about_to_die
+        elif (cur[r, c] == 1 and 2 <= num_alive <= 3) or (cur[r, c] == 0 and num_alive == 3):
+            nxt[r, c] = 1
+            col = col_alive
 
-def make_empty_grid(x, y):
-    grid = []
-    for r in range(x):
-        row = []
-        for c in range(y):
-            row.append(0)
-        grid.append(row)
-    return grid
+        col = col if cur[r, c] == 1 else col_background
+        pygame.draw.rect(surface, col, (c*sz, r*sz, sz-1, sz-1))
 
-def make_random_grid(x, y):
-        grid = []
-        for r in range(x):
-            row = []
-            for c in range(y):
-                row.append(randint(0,1))
-            grid.append(row)
-        return grid
+    return nxt
 
-def evolve(grid):
-    x = len(grid)
-    y = len(grid[0])
-    new_grid = make_empty_grid(x, y)
-    for r in range(x):
-        for c in range(y):
-            cell = grid[r][c]
-            neighbours = count_neighbours(grid, (r, c))
-            new_grid[r][c] = 1 if evolve_cell(cell, neighbours) else 0
-    return new_grid
+def init(dimx, dimy):
+    cells = np.zeros((dimy, dimx))
 
-BLACK = (0, 0, 0)
+    pattern = np.array([[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0],
+                        [1,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [1,1,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,1,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]);
+    pos = (3,3)
+    cells[pos[0]:pos[0]+pattern.shape[0], pos[1]:pos[1]+pattern.shape[1]] = pattern
+    return cells
 
-def draw_block(x, y, alive_color):
-    block_size = 9
-    x *= block_size
-    y *= block_size
-    center_point = ((x + (block_size / 2)), (y + (block_size / 2)))
-    pygame.draw.circle(screen, alive_color, center_point, block_size / 2,0)
+def main(dimx, dimy, cellsize):
+    pygame.init()
+    surface = pygame.display.set_mode((dimx * cellsize, dimy * cellsize))
+    pygame.display.set_caption("Game of Life")
 
+    cells = init(dimx, dimy)
 
-def main():
-    h = 0
-    cell_number = 0
-    alive_color = pygame.Color(0,0,0)
-    alive_color.hsva = [h, 100, 100]
-    xlen = xmax / 9
-    ylen = ymax / 9
     while True:
-        world = make_random_grid(xlen, ylen)
-        for i in xrange(200):
-            for x in range(xlen):
-                for y in range(ylen):
-                    alive = world[x][y]
-                    cell_number += 1
-                    cell_color = alive_color if alive else BLACK
-                    draw_block(x, y, cell_color)
-            pygame.display.flip()
-            h = (h + 2) % 360
-            alive_color.hsva = (h, 100, 100)
-            world = evolve(world)
-            cell_number = 0
-            sleep(0.1)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
 
-if __name__ == '__main__':
-    main()
+        surface.fill(col_grid)
+        cells = update(surface, cells, cellsize)
+        pygame.display.update()
+
+if __name__ == "__main__":
+    main(100, 70, 8)
