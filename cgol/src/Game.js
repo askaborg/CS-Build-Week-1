@@ -2,8 +2,8 @@ import React from "react"
 import "./Game.css"
 
 const CELL_SIZE = 10
-const WIDTH = 400
-const HEIGHT = 300
+let WIDTH = 400
+let HEIGHT = 300
 
 class Cell extends React.Component {
     render() {
@@ -72,7 +72,7 @@ class Game extends React.Component {
         const offsetY = event.clientY - elemOffset.y
         const x = Math.floor(offsetX / CELL_SIZE)
         const y = Math.floor(offsetY / CELL_SIZE)
-        if (x >= 0 && x <= this.cols && y >= 0 && y <= this.rows) {
+        if (!this.state.isRunning && x >= 0 && x <= this.cols && y >= 0 && y <= this.rows) {
             this.board[y][x] = !this.board[y][x]
         }
         this.setState({ cells: this.makeCells() })
@@ -137,6 +137,19 @@ class Game extends React.Component {
         this.setState({ interval: event.target.value })
     }
 
+    handlePreset = () => {
+        if (!this.state.isRunning) {
+            this.board = this.makeEmptyBoard()
+            for (let y = this.rows/2; y < this.rows; y++) {
+                for (let x = this.cols/2; x < this.cols; x++) {
+                    this.board[y][x] = true
+                }
+            }
+            this.setState({ cells: this.makeCells(), generation: this.state.generation = 0 })
+        }
+
+    }
+
     handleClear = () => {
         this.board = this.makeEmptyBoard()
         this.setState({ cells: this.makeCells() , generation: this.state.generation = 0 })
@@ -171,6 +184,7 @@ class Game extends React.Component {
                         <button className="button" onClick={this.runGame}>Run</button>
                     }
                     <button className="button" onClick={this.handleRandom}>Random</button>
+                    <button className="button" onClick={this.handlePreset}>Preset</button>
                     <button className="button" onClick={this.handleClear}>Clear</button>
                     <h3>Rules of Life:</h3>
                     <p>1. Any live cell with fewer than two live neighbors dies.</p>

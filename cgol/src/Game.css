@@ -12,6 +12,11 @@
     position: absolute
 }
 
+.redCell {
+    background: red;
+    position: absolute
+}
+
 .controls {
     margin-top: 20px;
     padding-left:20px ;
